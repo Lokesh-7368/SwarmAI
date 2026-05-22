@@ -1,0 +1,349 @@
+{
+  "name": "SwarmAI - Email Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chatInput"
+            },
+            {
+              "name": "userId"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        -64
+      ],
+      "id": "a89643fd-464b-474e-aa70-98e9e436ec61",
+      "name": "When Executed by Main Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.userId || 'default' }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        464,
+        160
+      ],
+      "id": "610dffd3-1c46-4788-a68f-ab51e5ab4197",
+      "name": "Per-User Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User Query: {{ $json.chatInput }}\nCurrent Time: {{ $now }}\nToday: {{ $today }}",
+        "options": {
+          "systemMessage": "You are the Email module of Nikki, an AI assistant by Team SwarmAI. You handle Gmail operations.\n\nIMPORTANT CONTEXT: You receive instructions via chatInput from the Main Router. You have NO access to the original user conversation. The chatInput is your ONLY source of information. If the chatInput doesn't include a recipient email, you CANNOT guess — respond with an error.\n\nCAPABILITIES:\n- Send emails (to, subject, body)\n- Read/search emails (by sender, date, subject, or search query)\n- Reply to specific emails (by message ID)\n- Delete emails (by message ID)\n\nCRITICAL SAFETY RULES:\n1. NEVER send email to placeholder or example addresses. If you see any of these patterns, REFUSE and return an error:\n   - recipient@example.com, user@example.com, test@example.com\n   - anything@example.com, anything@example.org\n   - any address that looks like a template rather than a real email\n   Return: \"Error: No valid recipient email was provided. Please specify the exact email address.\"\n\n2. For delete operations or bulk sends, always confirm the action in your output before executing if possible.\n\nEMAIL SIGNATURE:\nWhen SENDING emails (not reading), append this at the end of the email body:\n\n---\nSent via Nikki — AI co-pilot by Team SwarmAI\nCSE461 Internship Project | Lovely Professional University\n\nFORMATTING:\n- All timestamps in ISO 8601 with +05:30 (IST)\n- Output plain text only, no Markdown\n- Keep responses under 4000 characters\n- Be concise in your output — Main Router will relay to the user\n\nOUTPUT FORMAT:\nAction: sent / read / replied / deleted / searched\nTo: (email address, if sending)\nSubject: (if applicable)\nTime: (ISO 8601 +05:30)\nStatus: Success / Failed\nDetails: (brief summary of what happened)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        368,
+        -64
+      ],
+      "id": "903c3614-b8f1-4dfe-952c-cf81f05886ba",
+      "name": "Email Agent"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        272
+      ],
+      "id": "452b737d-8b9c-44a1-ac0f-c5690326330a",
+      "name": "Send Email",
+      "webhookId": "email-send-v2-wh",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "VxMOdsBnPRnSedHH",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "filters": {
+          "q": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Search_Query', 'Gmail search query e.g. is:unread or from:boss@co.com', 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        832,
+        256
+      ],
+      "id": "a6223635-e70a-4da1-9fff-779947a40887",
+      "name": "List Emails",
+      "webhookId": "email-list-v2-wh",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LoKSpOzi5Ma7n9bg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        256
+      ],
+      "id": "5aeeacd0-d659-44b1-be7d-1fcb53575a46",
+      "name": "Get Email",
+      "webhookId": "email-get-v2-wh",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LoKSpOzi5Ma7n9bg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Reply_Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1152,
+        256
+      ],
+      "id": "0a1f15af-a49e-4b0e-a3f9-1d7a32aa72a8",
+      "name": "Reply Email",
+      "webhookId": "email-reply-v2-wh",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LoKSpOzi5Ma7n9bg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1312,
+        256
+      ],
+      "id": "206278e7-378d-41a7-94ae-f945d7ebcff6",
+      "name": "Delete Email",
+      "webhookId": "email-delete-v2-wh",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LoKSpOzi5Ma7n9bg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        368
+      ],
+      "id": "26036b87-7070-4ef0-8dc2-9ab9207ac3c9",
+      "name": "OpenAI Chat Model",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        160
+      ],
+      "id": "899fda9c-e243-4ed6-ad6e-468c729b6d2c",
+      "name": "GPT-4o",
+      "credentials": {
+        "openAiApi": {
+          "id": "OhSOIv59PXulwmjF",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        368
+      ],
+      "id": "5356b9d4-8b90-4164-8e5a-da8c47a2d915",
+      "name": "Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "W0xM5z7LQBWC25kn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Main Agent": {
+      "main": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Per-User Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "GPT-4o": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "14ab89fa-db6a-49fe-9fed-1a95d7f2c758",
+  "meta": {
+    "instanceId": "7e916afc835e804086702dda0fe77067a805bc745f1be7357985765f8a98ca19"
+  },
+  "id": "1SkyjtXaTdQv9q44",
+  "tags": []
+}
