@@ -430,4 +430,3 @@ SwarmAI is a Telegram-based multi-agent assistant built with n8n. Telegram sends
 
 SwarmAI Team
 
-Registration Number: 12216917
